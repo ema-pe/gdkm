@@ -1,3 +1,8 @@
+// Copyright (c) 2024 Emanuele Petriglia <inbox@emanuelepetriglia.com>
+// All rights reserved. This file is licensed under the MIT license.
+
+// GDKM is a small CLI program to manage SSH keys to be used as GitHub deploy
+// keys.
 package main
 
 import (
