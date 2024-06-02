@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 
@@ -76,15 +77,13 @@ func GenerateKeys() (string, string, error) {
 	// Generate a new ed25519 key pair.
 	edPublic, edPrivate, err := ed25519.GenerateKey(nil)
 	if err != nil {
-		fmt.Errorf("Failed to generate ed25519 key pair: %w", err)
-		return "", "", err
+		return "", "", fmt.Errorf("failed to generate ed25519 key pair: %w", err)
 	}
 
 	// Create a new SSH public key from the raw key.
 	sshPublic, err := ssh.NewPublicKey(edPublic)
 	if err != nil {
-		fmt.Errorf("Failed to create SSH public key: %w", err)
-		return "", "", err
+		return "", "", fmt.Errorf("failed to create SSH public key: %w", err)
 	}
 
 	// Serialize the SSH public key to OpenSSH format.
@@ -93,8 +92,7 @@ func GenerateKeys() (string, string, error) {
 	// Serialize the SSH private key to OpenSSH format. It returns a PEM block.
 	pemPrivate, err := ssh.MarshalPrivateKey(edPrivate, "")
 	if err != nil {
-		fmt.Errorf("Failed to create PEM block for private key: %w", err)
-		return "", "", err
+		return "", "", fmt.Errorf("failed to create PEM block for private key: %w", err)
 	}
 
 	// Convert the PEM block to string.
@@ -106,17 +104,19 @@ func GenerateKeys() (string, string, error) {
 // CloneRepository clones the specified Git repository over SSH using the
 // specified SSH key (in OpenSSH format) to the specified destination folder.
 func CloneRepository(repositoryURL, privateKey, dest string) error {
-	file := "key"
-
 	// dest directory must be empty or not existent.
 	entries, err := os.ReadDir(dest)
 	if err != nil {
-		return fmt.Errorf("failed to check %q directory: %w", dest, err)
+		if !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("failed to check %q directory: %w", dest, err)
+		}
 	}
 	if len(entries) > 0 {
 		fmt.Fprintf(os.Stderr, "%q folder must be empty to clone the repository\n", dest)
 		os.Exit(1)
 	}
+
+	file := "key"
 
 	// The privateKey must be temporarily saved to disk to be used by the SSH
 	// client.
@@ -124,12 +124,18 @@ func CloneRepository(repositoryURL, privateKey, dest string) error {
 	// The permission bit must be restricted, otherwise the SSH client won't be
 	// able to read the key file.
 	if err := os.WriteFile(file, []byte(privateKey), 0600); err != nil {
-		return fmt.Errorf("failed to create temporary file for private key: %w", err)
+		return fmt.Errorf("failed to write key file: %w", err)
 	}
-	defer func() { // Remember to delete the file at exit.
+	defer func() error { // Before exit we must remove the temporary file.
 		if err := os.Remove(file); err != nil {
-			fmt.Errorf("failed to delete remporary file for private key: %w", err)
+			if errors.Is(err, fs.ErrNotExist) {
+				// This is not an error, it means the file has been already
+				// deleted (or moved, see below).
+				return nil
+			}
+			return fmt.Errorf("failed to remove temporary key file: %w", err)
 		}
+		return nil
 	}()
 
 	// The command to execute.
@@ -144,8 +150,22 @@ func CloneRepository(repositoryURL, privateKey, dest string) error {
 		"-c", fmt.Sprintf("core.sshCommand=ssh -i %s -o IdentitiesOnly=yes", file),
 		repositoryURL, dest)
 
+	// Execute command.
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run git clone: %w", err)
+	}
+
+	// Now the repository has been cloned into the dest directory. Because we
+	// use the "-c" option for the git clone command, the new repository has
+	// this configuration variable set in the repository's config file.
+	//
+	//
+	// Git commands invoked in this new repository that refer to remote will use
+	// the core.sshCommand variable. For this reason, we need to move the key
+	// file to the repository root, otherwise Git will not be able to read the
+	// file.
+	if err := os.Rename(file, fmt.Sprintf("%s/%s", dest, file)); err != nil {
+		return fmt.Errorf("failed to move key file to the repository: %w", err)
 	}
 
 	return nil
@@ -201,44 +221,6 @@ func CliGenerateKeypair(ctx *cli.Context) error {
 	// Just print at the end the public key. This will be sent to the repository
 	// owner.
 	fmt.Print(public)
-
-	return nil
-}
-
-// CliCloneRepository implements the "clone" command.
-//
-// It clones the Git repository associated to a SSH key pair. This is why the
-// command requires to specify the ID of the key pair.
-func CliCloneRepository(ctx *cli.Context) error {
-	keyringFile := ctx.String("keyring")
-
-	// Load the key ring from file.
-	keyring, err := Load(keyringFile)
-	if err != nil {
-		return fmt.Errorf("failed to load key ring: %w", err)
-	}
-
-	// Extract ID argument from command line.
-	args := ctx.Args()
-	if args.Len() < 1 {
-		fmt.Fprintln(os.Stderr, "Missing mandatory [id] argument")
-		os.Exit(1)
-	} else if args.Len() > 1 {
-		fmt.Fprintln(os.Stderr, "Too many arguments")
-		os.Exit(1)
-	}
-	id := args.Get(0)
-
-	// Get the selected key pair.
-	keypair, exist := keyring[id]
-	if !exist {
-		fmt.Fprintf(os.Stderr, "Key pair %q does not exist\n", id)
-		os.Exit(1)
-	}
-
-	if err := CloneRepository(keypair.RepositoryURL, keypair.PrivateKey, id); err != nil {
-		return fmt.Errorf("failed to clone repository associated with id %q: %w", id, err)
-	}
 
 	return nil
 }
@@ -300,6 +282,46 @@ func CliGetField(ctx *cli.Context) error {
 	return nil
 }
 
+// CliCloneRepository implements the "clone" command.
+//
+// It clones the Git repository associated to a SSH key pair. This is why the
+// command requires to specify the ID of the key pair.
+func CliCloneRepository(ctx *cli.Context) error {
+	keyringFile := ctx.String("keyring")
+
+	// Load the key ring from file.
+	keyring, err := Load(keyringFile)
+	if err != nil {
+		return fmt.Errorf("failed to load key ring: %w", err)
+	}
+
+	// Extract ID argument from command line.
+	args := ctx.Args()
+	if args.Len() < 1 {
+		fmt.Fprintln(os.Stderr, "Missing mandatory [id] argument")
+		os.Exit(1)
+	} else if args.Len() > 1 {
+		fmt.Fprintln(os.Stderr, "Too many arguments")
+		os.Exit(1)
+	}
+	id := args.Get(0)
+
+	// Get the selected key pair.
+	keypair, exist := keyring[id]
+	if !exist {
+		fmt.Fprintf(os.Stderr, "Key pair %q does not exist\n", id)
+		os.Exit(1)
+	}
+
+	// Clone the repository associated with the given key pair to "id"
+	// directory.
+	if err := CloneRepository(keypair.RepositoryURL, keypair.PrivateKey, id); err != nil {
+		return fmt.Errorf("failed to clone repository associated with id %q: %w", id, err)
+	}
+
+	return nil
+}
+
 func main() {
 	// Create and configure the application.
 	app := cli.NewApp()
@@ -332,7 +354,7 @@ func main() {
 	// "get" command.
 	getCommand := &cli.Command{
 		Name:      "get",
-		Usage:     "Get a single field of the key ring. If id is not specified, return all ids.",
+		Usage:     "Get a single field of the key ring. If ID is not specified, return all ids",
 		Args:      true,
 		ArgsUsage: " [id] [PublicKey|PrivateKey|RepositoryURL]",
 		Action:    CliGetField,
@@ -341,13 +363,11 @@ func main() {
 	// "clone" command.
 	cloneCommand := &cli.Command{
 		Name:      "clone",
-		Usage:     "Clone the repository associated with the given key pair",
+		Usage:     "Clone the repository associated with the given key pair ID",
 		Args:      true,
 		ArgsUsage: " [id]",
 		Action:    CliCloneRepository,
 	}
-
-	// "pull" command.
 
 	app.Commands = []*cli.Command{genCommand, getCommand, cloneCommand}
 
