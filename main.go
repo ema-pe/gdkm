@@ -11,8 +11,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/go-git/go-git/v5"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -69,25 +67,6 @@ func (kr Keyring) Save(file string) error {
 	}
 
 	return nil
-}
-
-func gitFunc() {
-	url := "git@github.com:UNIMIBInside/dfaas.git"
-	directory := "example"
-
-	repo, err := git.PlainClone(directory, false, &git.CloneOptions{URL: url})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to clone the repository: %s\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Succesfully cloned to %q\n", directory)
-
-	config, err := repo.Config()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get config from the repository: %s\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Config: %+v\n", config)
 }
 
 // GenerateKeys returns an Ed25519 SSH key pair (public and private keys).
@@ -208,9 +187,9 @@ func CliGenerateKeypair(ctx *cli.Context) error {
 	}
 
 	keyring[id] = Keypair{
-		Id: id,
-		PublicKey: public,
-		PrivateKey: private,
+		Id:            id,
+		PublicKey:     public,
+		PrivateKey:    private,
 		RepositoryURL: repoURL,
 	}
 
@@ -343,29 +322,29 @@ func main() {
 
 	// "generate" command.
 	genCommand := &cli.Command{
-		Name:   "generate",
-		Usage: "Print the public key of a new SSH key pair in the key ring",
-		Args: true,
+		Name:      "generate",
+		Usage:     "Print the public key of a new SSH key pair in the key ring",
+		Args:      true,
 		ArgsUsage: " [id] [Repository URL]",
-		Action: CliGenerateKeypair,
+		Action:    CliGenerateKeypair,
 	}
 
 	// "get" command.
 	getCommand := &cli.Command{
-		Name: "get",
-		Usage: "Get a single field of the key ring. If id is not specified, return all ids.",
-		Args: true,
+		Name:      "get",
+		Usage:     "Get a single field of the key ring. If id is not specified, return all ids.",
+		Args:      true,
 		ArgsUsage: " [id] [PublicKey|PrivateKey|RepositoryURL]",
-		Action: CliGetField,
+		Action:    CliGetField,
 	}
 
 	// "clone" command.
 	cloneCommand := &cli.Command{
-		Name: "clone",
-		Usage: "Clone the repository associated with the given key pair",
-		Args: true,
+		Name:      "clone",
+		Usage:     "Clone the repository associated with the given key pair",
+		Args:      true,
 		ArgsUsage: " [id]",
-		Action: CliCloneRepository,
+		Action:    CliCloneRepository,
 	}
 
 	// "pull" command.
