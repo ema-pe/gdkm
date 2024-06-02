@@ -1,0 +1,23 @@
+# Copyright (c) 2024 Emanuele Petriglia <inbox@emanuelepetriglia.com>
+# All rights reserved. This file is licensed under the MIT license.
+image: golang:1.22
+
+stages:
+  - test
+  - build
+
+checks:
+  stage: test
+  before_script:
+    - go install honnef.co/go/tools/cmd/staticcheck@latest
+  script:
+    - go vet ./...
+    - staticcheck ./...
+
+compile:
+  stage: build
+  script:
+    - go build .
+  artifacts:
+    paths:
+      - gdkm
