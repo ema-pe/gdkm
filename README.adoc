@@ -1,0 +1,10 @@
+= GDKM
+
+**WIP**
+
+== License
+
+Copyright (c) 2024 Emanuele Petriglia
+
+All right reserved. The project is licensed under the MIT License. See xref:LICENSE[`LICENSE`] file for more information.
+
