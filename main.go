@@ -332,10 +332,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "gdkm"
 	app.Usage = "A small program to manage SSH keys to be used as GitHub deploy keys"
-	app.Action = func(*cli.Context) error {
-		fmt.Printf("Hello World!\n")
-		return nil
-	}
+	app.Action = cli.ShowAppHelp
 
 	// "--keyring" global option.
 	fileFlag := &cli.StringFlag{
