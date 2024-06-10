@@ -19,5 +19,6 @@ compile:
   script:
     - go build .
   artifacts:
+    name: "gdkm"
     paths:
       - gdkm
