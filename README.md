@@ -1,12 +1,12 @@
-= GDKM
+# GDKM
 
-*GDKM* is a small program for managing a set of SSH keys used to clone Git repositories. The SSH keys are generated and stored in an unencrypted JSON file, then retrieved when the user needs to clone a repository. The cloned repository will also contain the settings for Git to use the private key for subsequent commands involving SSH, and the private key will be copied inside the repository.
+**GDKM** is a small program for managing a set of SSH keys used to clone Git repositories. The SSH keys are generated and stored in an unencrypted JSON file, then retrieved when the user needs to clone a repository. The cloned repository will also contain the settings for Git to use the private key for subsequent commands involving SSH, and the private key will be copied inside the repository.
 
-The reason for *GDKM* is to facilitate the use of SSH keys as https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#deploy-keys[deployment keys in GitHub]. These keys need to be unique for each repository, so if the user has a lot of repositories, it can be burdensome to manually manage each one with the standard way. In fact, GDKM stands for _Github Deploy Keys Manager_.
+The reason for **GDKM** is to facilitate the use of SSH keys as [deployment keys in GitHub](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#deploy-keys). These keys need to be unique for each repository, so if the user has a lot of repositories, it can be burdensome to manually manage each one with the standard way. In fact, GDKM stands for *Github Deploy Keys Manager*.
 
-Why did I create *GDKM*? Because I was an adjunct professor for my university in a course that required the students to create a final project for the exam. They could not submit the project as a ZIP file, but instead had to link to the project on GitHub. But the repository had to be private and I did not want to have access to it. So the solution was to use the deploy keys, one for each student project. This program helped me manage the keys and clone the repository to be ready to evaluate the project.
+Why did I create **GDKM**? Because I was an adjunct professor for my university in a course that required the students to create a final project for the exam. They could not submit the project as a ZIP file, but instead had to link to the project on GitHub. But the repository had to be private and I did not want to have access to it. So the solution was to use the deploy keys, one for each student project. This program helped me manage the keys and clone the repository to be ready to evaluate the project.
 
-== Installation
+## Installation
 
 Just clone the repository and build the project:
 
@@ -23,9 +23,9 @@ Or you can simply use the Go install command:
 $ go install -v gitlab.com/ema-pe/gdkm@latest
 ```
 
-== Usage
+## Usage
 
-Running `gdkm --help` (or `gdkm help`) will show the help message and all available commands. There is also documentation on https://pkg.go.dev/gitlab.com/ema-pe/gdkm[pkg.go.dev], but it is not useful because it shows the source code documentation.
+Running `gdkm --help` (or `gdkm help`) will show the help message and all available commands. There is also documentation on [pkg.go.dev](https://pkg.go.dev/gitlab.com/ema-pe/gdkm), but it is not useful because it shows the source code documentation.
 
 Two important concepts:
 
@@ -64,8 +64,8 @@ $ ls
 key ...  # "key" is the private key copied by GDKM.
 ```
 
-== License
+## License
 
 Copyright (c) 2024 Emanuele Petriglia
 
-All right reserved. The project is licensed under the MIT License. See xref:LICENSE[`LICENSE`] file for more information.
+All right reserved. The project is licensed under the MIT License. See [`LICENSE`](LICENSE) file for more information.
