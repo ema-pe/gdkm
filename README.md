@@ -6,6 +6,11 @@ The reason for **GDKM** is to facilitate the use of SSH keys as [deployment keys
 
 Why did I create **GDKM**? Because I was an adjunct professor for my university in a course that required the students to create a final project for the exam. They could not submit the project as a ZIP file, but instead had to link to the project on GitHub. But the repository had to be private and I did not want to have access to it. So the solution was to use the deploy keys, one for each student project. This program helped me manage the keys and clone the repository to be ready to evaluate the project.
 
+The git repository is available online on both [GitLab](https://gitlab.com/ema-pe/gdkm) and [GitHub](https://github.com/ema-pe/gdkm). However, GitHub is a read-only mirror of GitLab.
+
+> [!WARNING]  
+> As of 2025, I will no longer be using gdkm, and the code will no longer be updated.
+
 ## Installation
 
 Just clone the repository and build the project:
